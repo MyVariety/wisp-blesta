@@ -1,11 +1,11 @@
 {
-    "version": "1.0.4",
+    "version": "1.0.5",
     "name": "Wisp.name",
     "description": "Wisp.description",
     "authors": [
         {
-            "name": "HostBend LLC",
-            "url": "https://hostbend.com"
+            "name": "MyVariety LLC",
+            "url": "https://myvariety.net"
         }
     ],
     "service": {
