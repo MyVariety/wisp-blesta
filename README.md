@@ -1,4 +1,8 @@
-# This module is not being actively maintained. Due to recent API changes in WiSP, this module may not function correctly. Use at your own risk.
+# Updated to support PHP 8.1
+
+# Notice
+
+This module is not being actively maintained. Due to recent API changes in WiSP, this module may not function correctly. Use at your own risk.
 
 # WiSP Module
 
