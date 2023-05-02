@@ -5,7 +5,7 @@ class WispRule
     /**
      * Parses an egg variable from Wisp and returns a Blesta input validation rule array
      */
-       public function parseEggVariable($eggVariable)
+    public function parseEggVariable($eggVariable)
     {
         // Get the name of the field being validated
         $fieldName = $eggVariable->attributes->name;
