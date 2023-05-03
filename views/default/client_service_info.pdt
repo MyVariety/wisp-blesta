@@ -14,7 +14,7 @@
                     <td><?php $this->Html->_($username);?></td>
                     <td><?php $this->Html->_($password);?></td>
                     <td>
-                        <a href="<?php echo $module_row->meta->use_ssl ? 'https://' : 'http://';?><?php $this->Html->_($module_row->meta->host_name);?>/auth/login" target="_blank"><?php $this->Html->_($module_row->meta->host_name);?>/login</a>
+                        <a href="<?php echo $module_row->meta->use_ssl ? 'https://' : 'http://';?><?php $this->Html->_($module_row->meta->host_name);?>/login" target="_blank"><?php $this->Html->_($module_row->meta->host_name);?>/login</a>
                     </td>
                 </tr>
             </tbody>
