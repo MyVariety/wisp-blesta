@@ -12,10 +12,12 @@ Configure::set('Wisp.email_templates', [
     'en_us' => [
         'lang' => 'en_us',
         'text' => 'Thank you for ordering your Minecraft Server!
+
 Server Name: {service.server_name}
 Server Username: {service.server_username}
 Server Password: {service.server_password}
 Server IP and Port: {service.server_ip}:{service.server_port}
+
 Log into your account to start and manage your Minecraft Server! Be sure to start your Minecraft server for the first time from within our panel so that you can agree to the Mojang EULA.',
         'html' => '<p>Thank you for ordering your Minecraft Server!</p>
 <p>Server Name: {service.server_name}<br />Server Username: {service.server_username}<br />Server Password: {service.server_password}<br />Server IP and Port: {service.server_ip}:{service.server_port}</p>
