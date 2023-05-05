@@ -2,7 +2,7 @@
 
 # Notice
 
-This module is not being actively maintained. Due to recent API changes in WiSP, this module may not function correctly. Use at your own risk.
+This module has not yet been updated to support the new Wisp API
 
 # WiSP Module
 
@@ -32,4 +32,4 @@ your Blesta installation path.
 
 |Blesta Version|Module Version|
 |--------------|--------------|
-|>= v4.9.0|v1.0.3|
+|>= v5.6.1|v2023.05.0.1|
