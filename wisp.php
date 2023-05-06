@@ -1,5 +1,5 @@
 <?php
-use MyVariety\WispSDK\WispApi;
+use Blesta\PterodactylSDK\PterodactylApi;
 use Blesta\Core\Util\Validate\Server;
 
 /**
@@ -235,24 +235,15 @@ class Wisp extends Module
         $this->loadLib('wisp_service');
         $service_helper = new WispService();
         if ($vars['use_module'] == 'true') {
-            // Load Module
+            // Load/create user account
+            $wisp_user = $this->apiRequest('Users', 'getByExternalID', ['bl-' . $vars['client_id']]);
+
             $module = $this->getModule();
-            
-            // Fetch client
-            $client = $this->Clients->get($vars['client_id'] ?? null);
-                        
-            // Check if a user already exists with the current external id
-            $wisp_user = $this->apiRequest('Users', 'getByExternalID', ['bl-' . $vars['client_id']]);         
 
             if ($this->Input->errors()) {
                 $this->Input->setErrors([]);
-            }
-            
-            // If an account does not exists, create a new one and keep track of the credentials
-            if (empty($wisp_user)) {
                 $addParameters = $service_helper->addUserParameters($vars);
                 $wisp_user = $this->apiRequest('Users', 'add', [$addParameters]);
-                
                 if ($this->Input->errors()) {
                     return;
                 }
@@ -1286,10 +1277,10 @@ class Wisp extends Module
     private function getApi($host, $api_key, $use_ssl)
     {
         Loader::load(
-            dirname(__FILE__) . DS . 'components' . DS . 'modules' . DS . 'wisp-sdk' . DS . 'WispApi.php'
+            dirname(__FILE__) . DS . 'components' . DS . 'modules' . DS . 'pterodactyl-sdk' . DS . 'PterodactylApi.php'
         );
 
-        return new WispApi($api_key, $host, $use_ssl);
+        return new PterodactylApi($api_key, $host, $use_ssl);
     }
 
     /**
@@ -1309,7 +1300,9 @@ class Wisp extends Module
                 'valid' => [
                     'rule' => function ($host_name) {
                         $validator = new Server();
-                        return $validator->isDomain($host_name) || $validator->isIp($host_name);
+                        $parts = explode(':', $host_name, 2);
+                        return ($validator->isDomain($parts[0]) || $validator->isIp($parts[0]))
+                            && (!isset($parts[1]) || is_numeric($parts[1]));
                     },
                     'message' => Language::_('Wisp.!error.host_name.valid', true)
                 ]
