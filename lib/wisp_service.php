@@ -132,6 +132,7 @@ class WispService
             'feature_limits' => [
                 'databases' => $package->meta->databases ? $package->meta->databases : null,
                 'allocations' => $package->meta->allocations ? $package->meta->allocations : null,
+                'backup_megabytes_limit' => $package->meta->backup_megabytes_limit ? $package->meta->backup_megabytes_limit : null,
             ]
         ];
     }
@@ -208,7 +209,7 @@ class WispService
             $serverId->attach(
                 $fields->fieldText(
                     'server_id',
-                    $this->Html->ifSet($vars->server_id),
+                    (isset($vars->server_id) ? $vars->server_id : null),
                     ['id' => 'server_id']
                 )
             );
@@ -225,7 +226,7 @@ class WispService
         $serverName->attach(
             $fields->fieldText(
                 'server_name',
-                $this->Html->ifSet($vars->server_name),
+                (isset($vars->server_name) ? $vars->server_name : null),
                 ['id' => 'server_name']
             )
         );
@@ -241,7 +242,7 @@ class WispService
         $serverDescription->attach(
             $fields->fieldText(
                 'server_description',
-                $this->Html->ifSet($vars->server_description),
+                (isset($vars->server_description) ? $vars->server_description : null),
                 ['id' => 'server_description']
             )
         );
@@ -269,11 +270,11 @@ class WispService
                 $field->attach(
                     $fields->fieldText(
                         $key,
-                        $this->Html->ifSet(
-                            $vars->{$key},
-                            $this->Html->ifSet(
-                                $package->meta->{$key},
-                                $envVariable->attributes->default_value
+                        (isset($vars->{$key})
+                            ? $vars->{$key}
+                            : (isset($package->meta->{$key})
+                                ? $package->meta->{$key}
+                                : $envVariable->attributes->default_value
                             )
                         ),
                         ['id' => $key]

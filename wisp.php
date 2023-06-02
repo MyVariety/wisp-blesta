@@ -808,7 +808,7 @@ class Wisp extends Module
         $fields = [
             'location_id', 'egg_id', 'nest_id', 'port_range',
             'pack_id', 'memory', 'swap', 'cpu', 'disk', 'io',
-            'startup', 'image', 'databases', 'allocations', 'backups'
+            'startup', 'image', 'databases', 'allocations', 'backup_megabytes_limit'
         ];
 
         // Override package fields, if an equivalent configurable option exists
