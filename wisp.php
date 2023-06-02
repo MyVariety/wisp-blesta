@@ -2,6 +2,13 @@
 use Blesta\PterodactylSDK\PterodactylApi;
 use Blesta\Core\Util\Validate\Server;
 
+/**
+ * Wisp Module
+ *
+ * @copyright Copyright (c) 2023, MyVariety LLC
+ * @license https://www.myvariety.net/legal MyVariety ToS
+ * @link https://www.myvariety.net/ MyVariety LLC
+ */
 class Wisp extends Module
 {
     /**
@@ -65,6 +72,10 @@ class Wisp extends Module
      * will determine how each method is defined. For example, the method "first"
      * may be implemented such that it returns the module row with the least
      * number of services assigned to it.
+     *
+     * @return array An array of order methods in key/value paris where the key is
+     *  the type to be stored for the group and value is the name for that option
+     * @see Module::selectModuleRow()
      */
     public function getGroupOrderOptions()
     {
@@ -76,6 +87,9 @@ class Wisp extends Module
     /**
      * Determines which module row should be attempted when a service is provisioned
      * for the given group based upon the order method set for that group.
+     *
+     * @return int The module row ID to attempt to add the service with
+     * @see Module::getGroupOrderOptions()
      */
     public function selectModuleRow($module_group_id)
     {
@@ -87,12 +101,14 @@ class Wisp extends Module
 
         if ($group) {
             switch ($group->add_order) {
-                default;
-                case 'first';
-                foreach ($group->rows as $row) {
-                    return $row->id;
-                }
-            break;
+                default:
+                case 'first':
+
+                    foreach ($group->rows as $row) {
+                        return $row->id;
+                    }
+
+                    break;
             }
         }
         return 0;
@@ -100,6 +116,10 @@ class Wisp extends Module
 
     /**
      * Attempts to validate service info. This is the top-level error checking method. Sets Input errors on failure.
+     *
+     * @param stdClass $package A stdClass object representing the selected package
+     * @param array $vars An array of user supplied info to satisfy the request (optional)
+     * @return bool True if the service validates, false otherwise. Sets Input errors when false.
      */
     public function validateService($package, array $vars = null)
     {
@@ -108,6 +128,10 @@ class Wisp extends Module
 
     /**
      * Attempts to validate an existing service against a set of service info updates. Sets Input errors on failure.
+     *
+     * @param stdClass $service A stdClass object representing the service to validate for editing
+     * @param array $vars An array of user-supplied info to satisfy the request (optional)
+     * @return bool True if the service update validates or false otherwise. Sets Input errors when false.
      */
     public function validateServiceEdit($service, array $vars = null)
     {
@@ -156,6 +180,27 @@ class Wisp extends Module
     /**
      * Adds the service to the remote server. Sets Input errors on failure,
      * preventing the service from being added.
+     *
+     * @param stdClass $package A stdClass object representing the selected package
+     * @param array $vars An array of user supplied info to satisfy the request (optional)
+     * @param stdClass $parent_package A stdClass object representing the parent
+     *  service's selected package (if the current service is an addon service) (optional)
+     * @param stdClass $parent_service A stdClass object representing the parent
+     *  service of the service being added (if the current service is an addon service
+     *  service and parent service has already been provisioned) (optional)
+     * @param string $status The status of the service being added. (optional) These include:
+     *
+     *  - active
+     *  - canceled
+     *  - pending
+     *  - suspended
+     * @return array A numerically indexed array of meta fields to be stored for this service containing:
+     *
+     *  - key The key for this meta field
+     *  - value The value for this key
+     *  - encrypted Whether or not this field should be encrypted (default 0, not encrypted)
+     * @see Module::getModule()
+     * @see Module::getModuleRow()
      */
     public function addService(
         $package,
@@ -167,6 +212,10 @@ class Wisp extends Module
         Loader::loadModels($this, ['ModuleClientMeta']);
 
         $meta = [];
+
+        // Set configurable options
+        $package = $this->getConfigurableOptions($vars, $package);
+
         // Load egg
         $wisp_egg = $this->apiRequest(
             'Nests',
@@ -315,6 +364,21 @@ class Wisp extends Module
     /**
      * Edits the service on the remote server. Sets Input errors on failure,
      * preventing the service from being edited.
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param array $vars An array of user supplied info to satisfy the request (optional)
+     * @param stdClass $parent_package A stdClass object representing the parent
+     *  service's selected package (if the current service is an addon service) (optional)
+     * @param stdClass $parent_service A stdClass object representing the parent
+     *  service of the service being edited (if the current service is an addon service) (optional)
+     * @return array A numerically indexed array of meta fields to be stored for this service containing:
+     *
+     *  - key The key for this meta field
+     *  - value The value for this key
+     *  - encrypted Whether or not this field should be encrypted (default 0, not encrypted)
+     * @see Module::getModule()
+     * @see Module::getModuleRow()
      */
     public function editService(
         $package,
@@ -334,6 +398,9 @@ class Wisp extends Module
         $this->loadLib('wisp_service');
         $service_helper = new WispService();
 
+        // Set configurable options
+        $package = $this->getConfigurableOptions($vars, $package);
+
         // Load egg
         $wisp_egg = $this->apiRequest(
             'Nests',
@@ -350,6 +417,7 @@ class Wisp extends Module
 
             // Load the server
             $wisp_server = $this->getServer($service);
+            
             if ($this->Input->errors()) {
                 return;
             }
@@ -378,8 +446,13 @@ class Wisp extends Module
                 $vars['server_port'] = isset($allocation->attributes->port) ? $allocation->attributes->port : null;
             }
 
-            // It is also possible to edit build details, but that is affected purely by package
-            // fields so we opted not to modify those when we edit the service
+            // Set package fields
+            $vars['allocation'] = $wisp_server->attributes->allocation;
+            $this->apiRequest(
+                'Servers',
+                'editBuild',
+                [$wisp_server->attributes->id, $service_helper->editServerBuildParameters($vars, $package)]
+            );
 
             // Edit startup parameters
             $this->apiRequest(
@@ -463,6 +536,22 @@ class Wisp extends Module
     /**
      * Cancels the service on the remote server. Sets Input errors on failure,
      * preventing the service from being cancelled.
+     *
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param stdClass $parent_package A stdClass object representing the parent
+     *  service's selected package (if the current service is an addon service) (optional)
+     * @param stdClass $parent_service A stdClass object representing the parent
+     *  service of the service being canceled (if the current service is an addon service) (optional)
+     * @return mixed null to maintain the existing meta fields or a numerically
+     *  indexed array of meta fields to be stored for this service containing:
+     *
+     *  - key The key for this meta field
+     *  - value The value for this key
+     *  - encrypted Whether or not this field should be encrypted (default 0, not encrypted)
+     * @see Module::getModule()
+     * @see Module::getModuleRow()
      */
     public function cancelService($package, $service, $parent_package = null, $parent_service = null)
     {
@@ -484,6 +573,20 @@ class Wisp extends Module
     /**
      * Suspends the service on the remote server. Sets Input errors on failure,
      * preventing the service from being suspended.
+     *
+     * @param stdClass $package A stdClass object representing the current package
+     * @param stdClass $service A stdClass object representing the current service
+     * @param stdClass $parent_package A stdClass object representing the parent
+     *  service's selected package (if the current service is an addon service)
+     * @param stdClass $parent_service A stdClass object representing the parent
+     *  service of the service being suspended (if the current service is an addon service)
+     * @return mixed null to maintain the existing meta fields or a numerically
+     *  indexed array of meta fields to be stored for this service containing:
+     *  - key The key for this meta field
+     *  - value The value for this key
+     *  - encrypted Whether or not this field should be encrypted (default 0, not encrypted)
+     * @see Module::getModule()
+     * @see Module::getModuleRow()
      */
     public function suspendService($package, $service, $parent_package = null, $parent_service = null)
     {
@@ -650,6 +753,9 @@ class Wisp extends Module
         // Load the helpers required for this view
         Loader::loadHelpers($this, ['Form', 'Html']);
 
+        // Get the service fields
+        $service_fields = $this->serviceFieldsToObject($service->fields);
+
         // Get server information from the application API
         $server = $this->getServer($service);
         $server_id = isset($server->attributes->identifier) ? $server->attributes->identifier : null;
@@ -691,6 +797,33 @@ class Wisp extends Module
     }
 
     /**
+     * Returns an array of package fields, overriding the configurable options
+     *
+     * @param array $vars An array of key/value input pairs
+     * @param stdClass $package A stdClass object representing the package for the service
+     * @return stdClass The modified package object
+     */
+    private function getConfigurableOptions(array $vars, $package)
+    {
+        $fields = [
+            'location_id', 'egg_id', 'nest_id', 'port_range',
+            'pack_id', 'memory', 'swap', 'cpu', 'disk', 'io',
+            'startup', 'image', 'databases', 'allocations', 'backup_megabytes_limit'
+        ];
+
+        // Override package fields, if an equivalent configurable option exists
+        if (!empty($vars['configoptions'])) {
+            foreach ($vars['configoptions'] as $field => $value) {
+                if (in_array($field, $fields)) {
+                    $package->meta->{$field} = $value;
+                }
+            }
+        }
+
+        return $package;
+    }
+
+    /**
      * Runs a particular API requestor method, logs, and reports errors
      */
     private function apiRequest($requestor, $action, array $data = [], $client_api = false)
@@ -712,10 +845,17 @@ class Wisp extends Module
         );
 
         // Perform the request
-        $response = call_user_func_array([$api->{$requestor}, $action], $data);
+        try {
+            $response = call_user_func_array([$api->{$requestor}, $action], $data);
+        } catch (Throwable $e) {
+            // Try executing the request again, without array keys
+            $response = call_user_func_array([$api->{$requestor}, $action], array_values($data));
+        }
+
         $errors = $response->errors();
         $this->log($requestor . '.' . $action, json_encode($data), 'input', true);
         $this->log($requestor . '.' . $action, $response->raw(), 'output', empty($errors));
+
 
         // Check for request errors
         if (!empty($errors)) {
@@ -985,7 +1125,53 @@ class Wisp extends Module
         $this->loadLib('wisp_service');
         $service_helper = new WispService();
 
-        // Load egg
+        // Get configurable options
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Record']);
+        }
+        if (!isset($this->Form)) {
+            Loader::loadHelpers($this, ['Form']);
+        }
+
+        $nest_id = $package->meta->nest_id;
+        $egg_id = $package->meta->egg_id;
+
+        $option_groups = [];
+        foreach ($package->option_groups as $option_group) {
+            $option_groups[] = $option_group->id;
+        }
+
+        if (!empty($option_groups)) {
+            $package->configurable_options = $this->Form->collapseObjectArray(
+                $this->Record->select(['package_options.id', 'package_options.name'])
+                    ->from('package_options')
+                    ->innerJoin(
+                        'package_option_group',
+                        'package_option_group.option_id',
+                        '=',
+                        'package_options.id',
+                        false
+                    )
+                    ->where('package_options.company_id', '=', Configure::get('Blesta.company_id'))
+                    ->where('package_option_group.option_group_id', 'IN', $option_groups)
+                    ->fetchAll(),
+                'id',
+                'name'
+            );
+        
+            // Load nest/egg from config option if submitted
+            if (isset($vars->configoptions)) {
+                $config_options = $package->configurable_options;
+                if (isset($config_options['nest_id'], $vars->configoptions[$config_options['nest_id']])) {
+                    $nest_id = $vars->configoptions[$config_options['nest_id']];
+                }
+
+                if (isset($config_options['egg_id'], $vars->configoptions[$config_options['egg_id']])) {
+                    $egg_id = $vars->configoptions[$config_options['egg_id']];
+                }
+            }
+        }
+        
         $wisp_egg = $this->apiRequest(
             'Nests',
             'eggsGet',
@@ -1012,7 +1198,53 @@ class Wisp extends Module
         $this->loadLib('wisp_service');
         $service_helper = new WispService();
 
-        // Load egg
+        // Get configurable options
+        if (!isset($this->Record)) {
+            Loader::loadComponents($this, ['Record']);
+        }
+        if (!isset($this->Form)) {
+            Loader::loadHelpers($this, ['Form']);
+        }
+
+        $nest_id = $package->meta->nest_id;
+        $egg_id = $package->meta->egg_id;
+
+        $option_groups = [];
+        foreach ($package->option_groups as $option_group) {
+            $option_groups[] = $option_group->id;
+        }
+
+        if (!empty($option_groups)) {
+            $package->configurable_options = $this->Form->collapseObjectArray(
+                $this->Record->select(['package_options.id', 'package_options.name'])
+                    ->from('package_options')
+                    ->innerJoin(
+                        'package_option_group',
+                        'package_option_group.option_id',
+                        '=',
+                        'package_options.id',
+                        false
+                    )
+                    ->where('package_options.company_id', '=', Configure::get('Blesta.company_id'))
+                    ->where('package_option_group.option_group_id', 'IN', $option_groups)
+                    ->fetchAll(),
+                'id',
+                'name'
+            );
+            
+            // Load nest/egg from config option if submitted
+            if (isset($vars->configoptions)) {
+                $config_options = $package->configurable_options;
+                if (isset($config_options['nest_id'], $vars->configoptions[$config_options['nest_id']])) {
+                    $nest_id = $vars->configoptions[$config_options['nest_id']];
+                }
+
+                if (isset($config_options['egg_id'], $vars->configoptions[$config_options['egg_id']])) {
+                    $egg_id = $vars->configoptions[$config_options['egg_id']];
+                }
+            }
+        }
+
         $wisp_egg = $this->apiRequest(
             'Nests',
             'eggsGet',
@@ -1068,7 +1300,9 @@ class Wisp extends Module
                 'valid' => [
                     'rule' => function ($host_name) {
                         $validator = new Server();
-                        return $validator->isDomain($host_name) || $validator->isIp($host_name);
+                        $parts = explode(':', $host_name, 2);
+                        return ($validator->isDomain($parts[0]) || $validator->isIp($parts[0]))
+                            && (!isset($parts[1]) || is_numeric($parts[1]));
                     },
                     'message' => Language::_('Wisp.!error.host_name.valid', true)
                 ]

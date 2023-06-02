@@ -1,4 +1,11 @@
 <?php
+/**
+ * Wisp Package Helper
+ *
+ * @copyright Copyright (c) 2023, MyVariety LLC
+ * @license https://www.myvariety.net/legal MyVariety ToS
+ * @link https://www.myvariety.net/ MyVariety LLC
+ */
 class WispPackage
 {
     /**

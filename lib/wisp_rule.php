@@ -1,5 +1,12 @@
 <?php
 use Blesta\Core\Util\Validate\Server;
+/**
+ * Wisp Rule Helper
+ *
+ * @copyright Copyright (c) 2023, MyVariety LLC
+ * @license https://www.myvariety.net/legal MyVariety ToS
+ * @link https://www.myvariety.net/ MyVariety LLC
+ */
 class WispRule
 {
     /**

@@ -1,4 +1,11 @@
 <?php
+/**
+ * Wisp Service Helper
+ *
+ * @copyright Copyright (c) 2023, MyVariety LLC
+ * @license https://www.myvariety.net/legal MyVariety ToS
+ * @link https://www.myvariety.net/ MyVariety LLC
+ */
 class WispService
 {
     /**
@@ -125,6 +132,7 @@ class WispService
             'feature_limits' => [
                 'databases' => $package->meta->databases ? $package->meta->databases : null,
                 'allocations' => $package->meta->allocations ? $package->meta->allocations : null,
+                'backup_megabytes_limit' => $package->meta->backup_megabytes_limit ? $package->meta->backup_megabytes_limit : null,
             ]
         ];
     }
@@ -201,7 +209,7 @@ class WispService
             $serverId->attach(
                 $fields->fieldText(
                     'server_id',
-                    $this->Html->ifSet($vars->server_id),
+                    (isset($vars->server_id) ? $vars->server_id : null),
                     ['id' => 'server_id']
                 )
             );
@@ -218,7 +226,7 @@ class WispService
         $serverName->attach(
             $fields->fieldText(
                 'server_name',
-                $this->Html->ifSet($vars->server_name),
+                (isset($vars->server_name) ? $vars->server_name : null),
                 ['id' => 'server_name']
             )
         );
@@ -234,7 +242,7 @@ class WispService
         $serverDescription->attach(
             $fields->fieldText(
                 'server_description',
-                $this->Html->ifSet($vars->server_description),
+                (isset($vars->server_description) ? $vars->server_description : null),
                 ['id' => 'server_description']
             )
         );
@@ -262,11 +270,11 @@ class WispService
                 $field->attach(
                     $fields->fieldText(
                         $key,
-                        $this->Html->ifSet(
-                            $vars->{$key},
-                            $this->Html->ifSet(
-                                $package->meta->{$key},
-                                $envVariable->attributes->default_value
+                        (isset($vars->{$key})
+                            ? $vars->{$key}
+                            : (isset($package->meta->{$key})
+                                ? $package->meta->{$key}
+                                : $envVariable->attributes->default_value
                             )
                         ),
                         ['id' => $key]
@@ -279,6 +287,30 @@ class WispService
                 $fields->setField($field);
             }
         }
+
+        $egg_id = isset($package->configurable_options['egg_id']) ? $package->configurable_options['egg_id'] : 0;
+        $nest_id = isset($package->configurable_options['nest_id']) ? $package->configurable_options['nest_id'] : 0;
+        $location_id = isset($package->configurable_options['location_id'])
+            ? $package->configurable_options['location_id']
+            : 0;
+        // Set js to refetch options when the nest or egg is changed
+        $fields->setHtml("
+            <script type=\"text/javascript\">
+                $(document).ready(function() {
+                    // Re-fetch module options to pull in eggs and egg variables
+                    // when a nest or egg respectively is selected
+                    $('.package_options').on(
+                        'focusout',
+                        '*[name=\"configoptions[$egg_id]\"], *[name=\"configoptions[$nest_id]\"], *[name=\"configoptions[$location_id]\"]',
+                        function() {
+                            var form = $(this).closest('form');
+                            $(form).append('<input type=\"hidden\" name=\"refresh_fields\" value=\"true\">');
+                            $(form).submit();
+                        }
+                    );
+                });
+            </script>
+        ");
 
         return $fields;
     }
